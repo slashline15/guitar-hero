@@ -83,22 +83,46 @@ check_existing_bios() {
 
 # Baixar do repositório GitHub
 download_from_github() {
-    log "Clonando repositório..."
+    log "Verificando repositório..."
     
     # Criar diretório temporário
     rm -rf "$TEMP_DIR"
     mkdir -p "$TEMP_DIR"
     
-    # Clonar apenas a pasta de BIOS (sparse checkout)
+    # Clonar repositório completo (mais simples e confiável)
     cd "$TEMP_DIR"
-    git clone --depth 1 --filter=blob:none --sparse "$GITHUB_REPO" .
-    git sparse-checkout set bios
-    
-    if [ -d "bios" ]; then
-        log "BIOS encontradas no repositório!"
-        return 0
-    else
+    git clone --depth 1 "$GITHUB_REPO" . || {
+        warning "Falha ao clonar repositório"
         return 1
+    }
+    
+    # Procurar BIOS em várias possíveis localizações
+    for dir in bios BIOS Bios roms ROMS Roms files; do
+        if [ -d "$dir" ]; then
+            log "Pasta '$dir' encontrada no repositório"
+            # Procurar arquivos de BIOS
+            find "$dir" -name "*.bin" -o -name "*.BIN" -o -name "*.rom" -o -name "*.ROM" | while read file; do
+                basename=$(basename "$file")
+                if [[ -n "${BIOS_FILES[$basename]}" ]]; then
+                    cp "$file" "$TEMP_DIR/"
+                    log "BIOS encontrada: $basename"
+                fi
+            done
+        fi
+    done
+    
+    # Verificar se encontrou alguma BIOS
+    local found=0
+    for bios in "${!BIOS_FILES[@]}"; do
+        [ -f "$TEMP_DIR/$bios" ] && ((found++))
+    done
+    
+    if [ $found -eq 0 ]; then
+        warning "Nenhuma BIOS encontrada no repositório"
+        return 1
+    else
+        log "$found BIOS encontrada(s)"
+        return 0
     fi
 }
 
@@ -126,25 +150,16 @@ download_via_torrent() {
 
 # Download direto de URLs
 download_direct() {
-    log "Baixando BIOS diretamente..."
-    
-    # URLs de backup (você deve adicionar URLs válidas aqui)
-    declare -A BIOS_URLS=(
-        ["SCPH10000.bin"]="https://example.com/bios/SCPH10000.bin"
-        ["SCPH30004R.bin"]="https://example.com/bios/SCPH30004R.bin"
-        ["SCPH39001.bin"]="https://example.com/bios/SCPH39001.bin"
-        ["SCPH70012.bin"]="https://example.com/bios/SCPH70012.bin"
-    )
-    
-    mkdir -p "$TEMP_DIR"
-    cd "$TEMP_DIR"
-    
-    for bios in "${!BIOS_URLS[@]}"; do
-        if [ ! -f "$BIOS_DIR/$bios" ]; then
-            log "Baixando $bios..."
-            wget -q --show-progress "${BIOS_URLS[$bios]}" -O "$bios" || warning "Falha ao baixar $bios"
-        fi
+    log "Download direto desabilitado por questões legais"
+    warning "Por favor, obtenha as BIOS de suas próprias fontes legais"
+    echo
+    echo "Arquivos necessários:"
+    for bios in "${!BIOS_FILES[@]}"; do
+        echo "  - $bios (MD5: ${BIOS_FILES[$bios]})"
     done
+    echo
+    echo "Coloque os arquivos em: $BIOS_DIR"
+    read -p "Pressione Enter para continuar..."
 }
 
 # Verificar integridade das BIOS
@@ -197,9 +212,9 @@ show_menu() {
     echo -e "${BLUE}Escolha o método de download:${NC}"
     echo
     echo "1) Download do repositório GitHub (Recomendado)"
-    echo "2) Download direto de URLs"
-    echo "3) Download via torrent"
-    echo "4) Tenho as BIOS, apenas verificar"
+    echo "2) Importar BIOS local"
+    echo "3) Verificar BIOS existentes"
+    echo "4) Informações sobre BIOS"
     echo "5) Sair"
     echo
 }
@@ -220,29 +235,35 @@ main() {
                     install_bios
                     break
                 else
-                    error "Falha ao baixar do GitHub"
+                    warning "Falha ao baixar do GitHub"
+                    echo "Tente a opção 2 para importar BIOS locais"
                 fi
                 ;;
             2)
-                download_direct
-                verify_bios || warning "Algumas BIOS falharam na verificação"
-                install_bios
-                break
+                import_local_bios
+                check_existing_bios
                 ;;
             3)
-                download_via_torrent
-                verify_bios || warning "Algumas BIOS falharam na verificação"
-                install_bios
-                break
-                ;;
-            4)
                 if [ -d "$BIOS_DIR" ]; then
                     cd "$BIOS_DIR"
                     for bios in *.bin *.BIN *.rom *.ROM; do
                         [ -f "$bios" ] && echo -e "  ${GREEN}✓${NC} $bios"
                     done
                 fi
-                break
+                read -p "Pressione Enter para continuar..."
+                ;;
+            4)
+                echo -e "${BLUE}Informações sobre BIOS PS2:${NC}"
+                echo
+                echo "As BIOS são necessárias para emular o PS2."
+                echo "Você deve extraí-las do seu próprio console PS2."
+                echo
+                echo "BIOS recomendadas:"
+                for bios in "${!BIOS_FILES[@]}"; do
+                    echo "  - $bios"
+                done
+                echo
+                read -p "Pressione Enter para continuar..."
                 ;;
             5)
                 exit 0

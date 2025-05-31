@@ -203,14 +203,21 @@ download_menu() {
         1)
             # Simular download direto
             local iso_name="${game_name// /-}.iso"
-            echo -e "${YELLOW}Download simulado de: $iso_name${NC}"
-            echo "Por questões legais, insira a URL real do jogo:"
+            echo -e "${YELLOW}Nota Legal:${NC}"
+            echo "Baixe apenas jogos que você possui fisicamente."
+            echo "O download de jogos protegidos por copyright sem"
+            echo "possuir o original é ilegal."
+            echo
+            echo "Por favor, insira a URL do jogo que você possui:"
             read -p "URL: " url
             if [ ! -z "$url" ]; then
                 download_direct "$url" "$iso_name"
             fi
             ;;
         2)
+            echo -e "${YELLOW}Nota Legal:${NC}"
+            echo "Use apenas para fazer backup de jogos que você possui."
+            echo
             echo "Insira o magnet link:"
             read -p "Magnet: " magnet
             if [ ! -z "$magnet" ]; then
@@ -221,7 +228,7 @@ download_menu() {
             search_alternative_sources "$game_name"
             ;;
         4)
-            echo "Insira URL ou Magnet link:"
+            echo "Insira URL ou Magnet link do seu backup:"
             read -p "> " link
             if [[ "$link" == magnet:* ]]; then
                 download_torrent "$game_name" "$link"

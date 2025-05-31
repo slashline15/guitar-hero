@@ -3,7 +3,7 @@
 # Script principal de instalação PCSX2 para Guitar Hero
 # LEX KING - THE CODE REIGNS HERE
 
-set -e
+set -euo pipefail
 
 # Cores
 RED='\033[0;31m'
@@ -134,7 +134,11 @@ install_vcxsrv() {
     
     # Configurar DISPLAY
     export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0.0
-    echo "export DISPLAY=\$(cat /etc/resolv.conf | grep nameserver | awk '{print \$2}'):0.0" >> ~/.bashrc
+    
+    # Adicionar ao .bashrc apenas se não existir
+    if ! grep -qF 'export DISPLAY=' ~/.bashrc; then
+        echo "export DISPLAY=\$(cat /etc/resolv.conf | grep nameserver | awk '{print \$2}'):0.0" >> ~/.bashrc
+    fi
 }
 
 # Instalar dependências
@@ -147,10 +151,14 @@ install_dependencies() {
     # Lista de pacotes
     PACKAGES=(
         # Essenciais
+        software-properties-common
         build-essential cmake git curl wget p7zip-full
         
         # Python
         python3 python3-pip python3-venv
+        
+        # FUSE para AppImage
+        libfuse2
         
         # X11/GUI
         x11-apps x11-utils x11-xserver-utils
@@ -169,6 +177,7 @@ install_dependencies() {
         # Ferramentas extras
         transmission-cli # Para downloads torrent
         jq # Para parsing JSON
+        unrar # Para arquivos RAR (alternativa ao p7zip-rar)
     )
     
     for package in "${PACKAGES[@]}"; do
@@ -177,6 +186,11 @@ install_dependencies() {
             sudo apt-get install -y "$package" || warning "Falha ao instalar $package"
         fi
     done
+    
+    # Tentar instalar p7zip-rar se disponível (opcional)
+    if apt-cache show p7zip-rar &>/dev/null; then
+        sudo apt-get install -y p7zip-rar || info "p7zip-rar não disponível, usando unrar"
+    fi
     
     log "Dependências instaladas!"
 }

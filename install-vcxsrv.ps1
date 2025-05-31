@@ -97,6 +97,18 @@ $configContent = @'
 $configContent | Out-File -FilePath $configPath -Encoding UTF8
 Write-Host "[✓] Configuração criada em: $configPath" -ForegroundColor Green
 
+# Alternativa: iniciar diretamente sem arquivo .xlaunch
+$vcxsrvExe = "${env:ProgramFiles}\VcXsrv\vcxsrv.exe"
+if (Test-Path $vcxsrvExe) {
+    # Matar instâncias anteriores
+    Get-Process vcxsrv -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Seconds 1
+    
+    # Iniciar com parâmetros diretos
+    Start-Process -FilePath $vcxsrvExe -ArgumentList "-multiwindow", "-clipboard", "-ac" -WindowStyle Hidden
+    Write-Host "[✓] VcXsrv iniciado com parâmetros diretos!" -ForegroundColor Green
+}
+
 # Adicionar ao Firewall
 Write-Host "[*] Configurando Firewall do Windows..." -ForegroundColor Yellow
 
@@ -119,8 +131,8 @@ Write-Host "[*] Criando atalho..." -ForegroundColor Yellow
 
 $WshShell = New-Object -comObject WScript.Shell
 $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\VcXsrv for WSL.lnk")
-$Shortcut.TargetPath = "${env:ProgramFiles}\VcXsrv\xlaunch.exe"
-$Shortcut.Arguments = "-run `"$configPath`""
+$Shortcut.TargetPath = "${env:ProgramFiles}\VcXsrv\vcxsrv.exe"
+$Shortcut.Arguments = "-multiwindow -clipboard -ac"
 $Shortcut.IconLocation = "${env:ProgramFiles}\VcXsrv\vcxsrv.exe"
 $Shortcut.Save()
 
@@ -133,7 +145,13 @@ Write-Host "[✓] Instalação concluída!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Iniciando VcXsrv automaticamente..." -ForegroundColor Yellow
 
-Start-Process -FilePath "${env:ProgramFiles}\VcXsrv\xlaunch.exe" -ArgumentList "-run `"$configPath`""
+# Usar execução direta ao invés de xlaunch
+$vcxsrvExe = "${env:ProgramFiles}\VcXsrv\vcxsrv.exe"
+if (Test-Path $vcxsrvExe) {
+    Start-Process -FilePath $vcxsrvExe -ArgumentList "-multiwindow", "-clipboard", "-ac" -WindowStyle Hidden
+} else {
+    Write-Host "[!] VcXsrv.exe não encontrado no caminho esperado" -ForegroundColor Red
+}
 
 Write-Host "[✓] VcXsrv está rodando!" -ForegroundColor Green
 Write-Host ""
