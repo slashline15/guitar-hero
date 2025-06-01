@@ -1,4 +1,3 @@
-
 # 🎸 LEX KING Guitar Hero PS2 System
 
 **THE CODE REIGNS HERE**

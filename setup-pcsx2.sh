@@ -572,6 +572,14 @@ main() {
     show_banner
     log "Iniciando instalação LEX KING Edition..."
     
+    # Verificar requisitos primeiro
+    if [ -f "$SCRIPT_DIR/check-requirements.sh" ]; then
+        log "Verificando requisitos do sistema..."
+        bash "$SCRIPT_DIR/check-requirements.sh" || {
+            error "Requisitos não atendidos. Verifique os problemas acima."
+        }
+    fi
+    
     # Etapas de instalação
     check_wsl
     download_scripts
